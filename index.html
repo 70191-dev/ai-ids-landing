@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-IDS · Security Operations Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --sans:'Inter',system-ui,sans-serif;
+    --mono:'JetBrains Mono',monospace;
+    --teal:#5eead4; --green:#1d9e75; --blue:#2d8ae8; --amber:#fbbf72; --red:#ef5350;
+    --txt:#f0f4f8; --txt2:#7e8e9d; --txt3:#566675; --txt4:#3a4d5c;
+    --bg:#060a10; --panel:#070d13; --line:#11202c;
+  }
+  html,body{background:#04070b;min-height:100vh}
+  body{font-family:var(--sans);display:flex;align-items:center;justify-content:center;padding:24px;color:var(--txt)}
+  .wrap{width:100%;max-width:860px}
+  .console{background:var(--bg);border:1px solid #14202c;border-radius:14px;overflow:hidden;position:relative}
+  .gridbg{position:absolute;inset:0;opacity:0.5;background-image:linear-gradient(#0d2030 1px,transparent 1px),linear-gradient(90deg,#0d2030 1px,transparent 1px);background-size:26px 26px}
+  .scan{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);animation:scanline 4s linear infinite;opacity:0.55}
+  .inner{position:relative}
+  @keyframes scanline{0%{transform:translateY(0)}100%{transform:translateY(330px)}}
+  @keyframes blip{0%,100%{opacity:0.25}50%{opacity:1}}
+  @keyframes radar{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+  @keyframes ping{0%{transform:scale(0.4);opacity:0.9}100%{transform:scale(2.6);opacity:0}}
+  @keyframes bar{0%,100%{height:6px;opacity:0.5}50%{height:var(--h);opacity:1}}
+  @keyframes flicker{0%,100%{opacity:1}48%{opacity:1}50%{opacity:0.4}52%{opacity:1}}
+  @keyframes feed{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
+  @keyframes dot{0%{left:0}100%{left:100%}}
+
+  .top{padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logobox{width:28px;height:28px;border-radius:7px;background:#06222f;border:1px solid #15455f;display:flex;align-items:center;justify-content:center}
+  .brand{font-size:14px;font-weight:500;letter-spacing:1px}
+  .topmeta{display:flex;align-items:center;gap:16px}
+  .mon{display:flex;align-items:center;gap:6px;color:var(--teal);font-family:var(--mono);font-size:10.5px;letter-spacing:1px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:blip 1.4s infinite}
+  .node{color:var(--txt4);font-family:var(--mono);font-size:10.5px;letter-spacing:1px}
+
+  .hero{display:grid;grid-template-columns:1.15fr 0.85fr;border-bottom:1px solid var(--line)}
+  .left{padding:34px 26px 28px}
+  .tag{display:inline-flex;align-items:center;gap:7px;background:#08161f;border:1px solid #123140;color:var(--teal);font-family:var(--mono);font-size:10.5px;letter-spacing:1px;padding:4px 11px;border-radius:4px;margin-bottom:18px}
+  h1{font-size:27px;font-weight:500;letter-spacing:-0.3px;line-height:1.22;margin-bottom:12px}
+  .lede{color:var(--txt2);font-size:13.5px;line-height:1.6;margin-bottom:24px;max-width:340px}
+  .stats{display:flex;gap:18px;margin-bottom:26px}
+  .stat .n{font-family:var(--mono);color:var(--teal);font-size:21px;font-weight:500}
+  .stat .l{color:var(--txt3);font-family:var(--mono);font-size:9.5px;letter-spacing:0.5px;margin-top:2px}
+  .sdiv{width:1px;background:#16242f}
+  .btns{display:flex;gap:11px;flex-wrap:wrap}
+  .btn{font-size:13.5px;font-weight:500;padding:11px 22px;border-radius:7px;display:inline-flex;align-items:center;gap:7px;text-decoration:none;cursor:pointer;transition:transform .12s,box-shadow .2s}
+  .btn:active{transform:scale(0.97)}
+  .btn-primary{background:var(--blue);color:#fff;box-shadow:0 0 14px rgba(45,138,232,0.45)}
+  .btn-primary:hover{box-shadow:0 0 22px rgba(45,138,232,0.7)}
+  .btn-ghost{background:transparent;color:#aebccb;border:1px solid #213140}
+  .btn-ghost:hover{border-color:#33485a;color:#cfdae6}
+
+  .right{border-left:1px solid var(--line);padding:20px;display:flex;flex-direction:column;gap:14px;background:var(--panel)}
+  .radar{position:relative;height:128px;display:flex;align-items:center;justify-content:center}
+  .ring{position:absolute;border:1px solid #133040;border-radius:50%}
+  .sweepwrap{position:absolute;width:118px;height:118px;border-radius:50%;overflow:hidden}
+  .sweep{position:absolute;top:50%;left:50%;width:59px;height:59px;transform-origin:top left;background:conic-gradient(from 0deg,rgba(29,158,117,0.32),transparent 55%);animation:radar 3.2s linear infinite}
+  .blip-r{position:absolute;border-radius:50%}
+  .pingdot{position:absolute;inset:0;border-radius:50%;animation:ping 2s infinite}
+  .bars{display:flex;align-items:flex-end;justify-content:space-between;gap:4px;height:34px;padding:0 4px}
+  .bars span{flex:1;border-radius:2px;animation:bar 1.6s infinite}
+  .feedbox{height:78px;overflow:hidden;border-top:1px solid var(--line);padding-top:6px}
+  .feedscroll{animation:feed 8s linear infinite}
+  .frow{font-family:var(--mono);font-size:10.5px;padding:3px 0;border-bottom:1px solid #0e1820;white-space:nowrap;color:#677787}
+
+  .feats{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--line)}
+  .feat{padding:16px 20px;position:relative;overflow:hidden}
+  .feat:not(:last-child){border-right:1px solid var(--line)}
+  .featbar{position:absolute;bottom:0;height:2px;width:30%;animation:dot 3s linear infinite}
+  .feathd{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .feathd span{color:#dde6ee;font-size:12.5px;font-weight:500}
+  .feat p{color:#5f6f7e;font-family:var(--mono);font-size:10px;line-height:1.5}
+
+  .foot{padding:13px 24px;display:flex;align-items:center;justify-content:space-between}
+  .foot span{color:var(--txt4);font-family:var(--mono);font-size:10px;letter-spacing:0.5px}
+  .ti{font-style:normal}
+  @media(max-width:620px){
+    .hero{grid-template-columns:1fr}
+    .right{border-left:none;border-top:1px solid var(--line)}
+    .feats{grid-template-columns:1fr}
+    .feat:not(:last-child){border-right:none;border-bottom:1px solid var(--line)}
+    h1{font-size:23px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="console">
+    <div class="gridbg"></div>
+    <div class="scan"></div>
+    <div class="inner">
+
+      <div class="top">
+        <div class="logo">
+          <div class="logobox"><i class="ti ti-shield-half" style="font-size:16px;color:var(--teal);animation:flicker 5s infinite"></i></div>
+          <span class="brand">AI-IDS</span>
+        </div>
+        <div class="topmeta">
+          <span class="mon"><span class="dot"></span>MONITORING</span>
+          <span class="node">node//host-01</span>
+        </div>
+      </div>
+
+      <div class="hero">
+        <div class="left">
+          <div class="tag"><i class="ti ti-activity" style="font-size:13px"></i>THREAT DETECTION ACTIVE</div>
+          <h1>AI-Driven Intrusion<br>Detection &amp; Mitigation</h1>
+          <p class="lede">Machine-learning network defence with human-approved firewall blocking. Cloud console, host-resident sensor.</p>
+          <div class="stats">
+            <div class="stat"><div class="n">8</div><div class="l">ATTACK CLASSES</div></div>
+            <div class="sdiv"></div>
+            <div class="stat"><div class="n">50</div><div class="l">FLOW FEATURES</div></div>
+            <div class="sdiv"></div>
+            <div class="stat"><div class="n">2</div><div class="l">PERSON RULE</div></div>
+          </div>
+          <div class="btns">
+            <a class="btn btn-primary" href="https://70191dev-ai-ids.hf.space" target="_blank" rel="noopener"><i class="ti ti-player-play" style="font-size:14px"></i>Launch dashboard</a>
+            <a class="btn btn-ghost" href="https://github.com/70191-dev/AI-IDS" target="_blank" rel="noopener"><i class="ti ti-brand-github" style="font-size:14px"></i>Source</a>
+          </div>
+        </div>
+
+        <div class="right">
+          <div class="radar">
+            <div class="ring" style="width:118px;height:118px"></div>
+            <div class="ring" style="width:78px;height:78px"></div>
+            <div class="ring" style="width:38px;height:38px"></div>
+            <div class="sweepwrap"><div class="sweep"></div></div>
+            <div class="blip-r" style="top:32%;left:40%;width:7px;height:7px"><span style="position:absolute;inset:0;border-radius:50%;background:var(--red)"></span><span class="pingdot" style="background:var(--red)"></span></div>
+            <div class="blip-r" style="top:62%;left:60%;width:6px;height:6px"><span style="position:absolute;inset:0;border-radius:50%;background:var(--amber)"></span><span class="pingdot" style="background:var(--amber);animation-delay:0.6s;animation-duration:2.6s"></span></div>
+            <div class="blip-r" style="top:55%;left:34%;width:5px;height:5px;background:var(--teal);animation:blip 1.8s infinite"></div>
+            <i class="ti ti-shield-half" style="position:absolute;font-size:15px;color:var(--blue)"></i>
+          </div>
+          <div class="bars">
+            <span style="background:var(--green);--h:28px;animation-delay:0s"></span>
+            <span style="background:var(--green);--h:18px;animation-delay:0.2s"></span>
+            <span style="background:var(--blue);--h:32px;animation-delay:0.4s"></span>
+            <span style="background:var(--green);--h:14px;animation-delay:0.6s"></span>
+            <span style="background:var(--amber);--h:24px;animation-delay:0.8s"></span>
+            <span style="background:var(--green);--h:20px;animation-delay:1s"></span>
+            <span style="background:var(--red);--h:30px;animation-delay:1.2s"></span>
+            <span style="background:var(--green);--h:16px;animation-delay:1.4s"></span>
+          </div>
+          <div class="feedbox">
+            <div class="feedscroll" id="feed"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feats">
+        <div class="feat">
+          <div class="featbar" style="background:var(--green);animation-delay:0s"></div>
+          <div class="feathd"><i class="ti ti-binary-tree" style="font-size:16px;color:var(--teal)"></i><span>Two-stage ML</span></div>
+          <p>binary + 8-class · CIC-IDS2017</p>
+        </div>
+        <div class="feat">
+          <div class="featbar" style="background:var(--blue);animation-delay:1s"></div>
+          <div class="feathd"><i class="ti ti-users-group" style="font-size:16px;color:var(--teal)"></i><span>Two-person block</span></div>
+          <p>request · approve · netsh</p>
+        </div>
+        <div class="feat">
+          <div class="featbar" style="background:var(--amber);animation-delay:2s"></div>
+          <div class="feathd"><i class="ti ti-list-check" style="font-size:16px;color:var(--teal)"></i><span>Append-only audit</span></div>
+          <p>every action · immutable</p>
+        </div>
+      </div>
+
+      <div class="foot">
+        <span>FINAL YEAR PROJECT · UNIVERSITY OF LAHORE</span>
+        <span>build v2.2</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  var rows = [
+    ['[OK]','var(--teal)','flow 192.168.1.14 · benign 0.08'],
+    ['[ALERT]','var(--red)','10.0.0.9 · brute-force 0.71'],
+    ['[WARN]','var(--amber)','port-scan seq · 0.44'],
+    ['[OK]','var(--teal)','flow 192.168.1.8 · benign 0.05'],
+    ['[BLOCK]','var(--red)','10.0.0.9 · admin approved']
+  ];
+  var feed = document.getElementById('feed');
+  var html = '';
+  for (var pass=0; pass<2; pass++){
+    for (var i=0;i<rows.length;i++){
+      html += '<div class="frow"><span style="color:'+rows[i][1]+'">'+rows[i][0]+'</span> '+rows[i][2]+'</div>';
+    }
+  }
+  feed.innerHTML = html;
+</script>
+</body>
+</html>
